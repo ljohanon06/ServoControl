@@ -1,5 +1,4 @@
 # ServoControl
-&copy; 2025 Levi Johanon. All rights reserved.
 
 ESP32-S3 Code and PCB design used for controlling up to 32 servos with 4 GPIO pins. Uses level shifters and d flip-flops on the pcb to control the servos. RMT is used on the ESP32-S3 to control the signals. The servos used are MG996R or any servo acceptiong a pwm from 1-2ms at 50Hz.
 
