@@ -33,7 +33,7 @@ static const rmt_symbol_word_t all_high = {.val = 0x00088020};
 
 
 struct servo_controller_s{
-    gpio_num_t[4] gpio_array;   //clk,pulse,1,2
+    gpio_num_t gpio_array[4];   //clk,pulse,1,2
     servo_precision_t servo_pres;
     float servo_angles[32];     //Holds servo angle 0-180
     uint16_t high_cycles[32];   //Holds number of cycles each servo is high for
@@ -73,35 +73,35 @@ esp_err_t servo_initialize_controller(const servo_controller_config_t *servo_cfg
 
     //Initialize Fixed memory
     servo_controller_handle_t handle = heap_caps_calloc(1,sizeof(struct servo_controller_s), (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.servo_angles = heap_caps_calloc(32,sizeof(float),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.high_cycles = heap_caps_calloc(32,sizeof(uint16_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.rmt_handles = heap_caps_calloc(4,sizeof(rmt_channel_handle_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
 
     //Initialize dynamic sized memory
-    handle.LUT1 = heap_caps_calloc(servo_cfg->serv_pres + 1,sizeof(uint16_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.LUT2 = heap_caps_calloc(servo_cfg->serv_pres + 1,sizeof(uint16_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.streaks_buffer = heap_caps_calloc((servo_cfg->serv_pres)*16 + 10,sizeof(uint8_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.rmt1 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
-    handle.rmt2 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    handle->LUT1 = heap_caps_calloc(servo_cfg->serv_pres + 1,sizeof(uint16_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    handle->LUT2 = heap_caps_calloc(servo_cfg->serv_pres + 1,sizeof(uint16_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    handle->streaks_buffer = heap_caps_calloc((servo_cfg->serv_pres)*16 + 10,sizeof(uint8_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    handle->rmt1 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+    handle->rmt2 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
 
-    ESP_RETURN_ON_FALSE(handle == NULL || servo_angles == NULL || high_cycles == NULL ||
-                        rmt_handles == NULL || LUT1 == NULL || LUT2 == NULL ||
-                        streaks_buffer == NULL || rmt1 == NULL || rmt2 == NULL,
+    ESP_RETURN_ON_FALSE(handle == NULL || handle->servo_angles == NULL || handle->high_cycles == NULL ||
+                        handle->rmt_handles == NULL || handle->LUT1 == NULL || handle->LUT2 == NULL ||
+                        handle->streaks_buffer == NULL || handle->rmt1 == NULL || handle->rmt2 == NULL,
                         ESP_ERR_NO_MEM, TAG, "There is not enough memory, please ensure 100 bytes per precision point");
 
     
     //Initialization
-    handle.gpio_array = gpio_array;
-    handle->rmt_size_1servo_pres = servo_cfg->serv_pres;
-    running = false;
-    task_handle = NULL:
+    handle->gpio_array[0] = servo_cfg->clk_gpio;
+    handle->gpio_array[1] = servo_cfg->pulse_gpio;
+    handle->gpio_array[2] = servo_cfg->servo1_gpio;
+    handle->gpio_array[3] = servo_cfg->servo2_gpio;
+    handle->servo_pres = servo_cfg->serv_pres;
+    handle->running = false;
+    handle->task_handle = NULL;
     
     for(int i = 0; i<4; i++) {
         rmt_tx_channel_config_t tx_config = {
             .clk_src = RMT_CLK_SRC_DEFAULT,
             .gpio_num = gpio_array[i],
             .mem_block_symbols = 64,
-            .resolution_hz = CLK_FREQ,
+            .resolution_hz = precision_to_clk_freq(handle->servo_pres),
             .trans_queue_depth = 6,
             .flags.invert_out = false,
             .flags.with_dma = false
@@ -122,7 +122,7 @@ esp_err_t servo_initialize_controller(const servo_controller_config_t *servo_cfg
     //Copy Encoder
     rmt_copy_encoder_config_t copy_cfg = {};
     handle->encoder_handle = NULL;
-    rmt_new_copy_encoder(copy_cfg, &(handle->encoder_handle));
+    rmt_new_copy_encoder(&copy_cfg, &(handle->encoder_handle));
 
     //Final Steps
     servo_set_all(handle,0.0);
@@ -145,36 +145,36 @@ static void servo_task(void *arg){
     rmt_transmit_config_t single = {.loop_count = 1, .flags.eot_level = 0, .flags.queue_nonblocking = false};
     rmt_transmit_config_t multiple = {.loop_count = handle->servo_pres+1, .flags.eot_level = 0, .flags.queue_nonblocking = false};
 
-    if(running){//rmt_handles goes clk, pulse, servo1, servo2
+    if(handle->running){//rmt_handles goes clk, pulse, servo1, servo2
         //All channels go high for 1 ms
-        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, clk, 17*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, pulse, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, all_high, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, all_high, 1*sizeof(rmt_symbol_word_t), single);
+        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, clk, 17*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, &pulse, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, &all_high, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, &all_high, 1*sizeof(rmt_symbol_word_t), &single);
 
         //1ms delay
-        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, delay_1_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, delay_1_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, delay_1_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, delay_1_sec, 1*sizeof(rmt_symbol_word_t), single);
+        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, &delay_1_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, &delay_1_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, &delay_1_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, &delay_1_sec, 1*sizeof(rmt_symbol_word_t), &single);
 
         //Transmit rmt_symbols, includes all low at end
-        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, clk, 17*sizeof(rmt_symbol_word_t), multiple);
-        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, pulse, 1*sizeof(rmt_symbol_word_t), multiple);
-        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, handle->rmt1, (handle->rmt_size_1)*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, handle->rmt2, (handle->rmt_size_2)*sizeof(rmt_symbol_word_t), single);
+        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, clk, 17*sizeof(rmt_symbol_word_t), &multiple);
+        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, &pulse, 1*sizeof(rmt_symbol_word_t), &multiple);
+        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, handle->rmt1, (handle->rmt_size_1)*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, handle->rmt2, (handle->rmt_size_2)*sizeof(rmt_symbol_word_t), &single);
 
         //Delay 18ms
-        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, delay_18_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, delay_18_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, delay_18_sec, 1*sizeof(rmt_symbol_word_t), single);
-        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, delay_18_sec, 1*sizeof(rmt_symbol_word_t), single);
+        rmt_transmit(handle->rmt_handles[0], handle->encoder_handle, &delay_18_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[1], handle->encoder_handle, &delay_18_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[2], handle->encoder_handle, &delay_18_sec, 1*sizeof(rmt_symbol_word_t), &single);
+        rmt_transmit(handle->rmt_handles[3], handle->encoder_handle, &delay_18_sec, 1*sizeof(rmt_symbol_word_t), &single);
 
         calculate_rmt(handle);
         vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(20));
     }
     
-    handle->task_handle = NULL
+    handle->task_handle = NULL;
     vTaskDelete(NULL);
 
 }
@@ -215,11 +215,13 @@ esp_err_t servo_remove_controller(servo_controller_handle_t handle){
     ESP_RETURN_ON_FALSE(handle == NULL, ESP_ERR_INVALID_ARG,TAG,"The handle is already null");
     ESP_RETURN_ON_FALSE(!handle->running, ESP_ERR_INVALID_STATE,TAG,"The controller is still started");
 
-    free(servo_angles);
-    free(high_cycles);
-    free(LUT1);
-    free(LUT2);
-    free(rmt_handles);
+   
+    
+    free(handle->LUT1);
+    free(handle->LUT2);
+    free(handle->rmt1);
+    free(handle->rmt2);
+    free(handle->streaks_buffer);
     free(handle);
     handle = NULL;
 
@@ -229,7 +231,7 @@ esp_err_t servo_remove_controller(servo_controller_handle_t handle){
 //Set a single servo position
 esp_err_t servo_set_servo(servo_controller_handle_t handle, uint8_t servo_num, float servo_position){
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "The handle is null");
-    ESP_RETURN_ON_FALSE(servo_num >= 0 && servo_num < 32, ESP_ERR_INVALID_ARG, TAG, "%hhu is not a valid servo", servo_num);
+    ESP_RETURN_ON_FALSE(servo_num < 32, ESP_ERR_INVALID_ARG, TAG, "%hhu is not a valid servo", servo_num);
     ESP_RETURN_ON_FALSE(servo_position >= 0 && servo_position <= 180, ESP_ERR_INVALID_ARG, TAG, "%.2f is not a valid servo position", servo_position);
 
     handle->servo_angles[servo_num] = servo_position;
@@ -308,7 +310,7 @@ void rmt_helper(uint16_t *LUT, size_t lut_size, rmt_symbol_word_t *words, size_t
             }
             mask = mask >> 1;
         }
-        if(len % 2 == 0){   
+        if(streak_length % 2 == 0){   
             streak_length += 8;     //At the end of the 16 servos, the line is held low for 8 tick
         }else{
             streaks_buffer[buffer_ind++] = streak_length;
