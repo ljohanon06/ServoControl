@@ -1,5 +1,9 @@
 # ServoControl
+&copy; 2025 Levi Johanon. All rights reserved.
+
 ESP32-S3 Code and PCB design used for controlling up to 32 servos with 4 GPIO pins. Uses level shifters and d flip-flops on the pcb to control the servos. RMT is used on the ESP32-S3 to control the signals. The servos used are MG996R or any servo acceptiong a pwm from 1-2ms at 50Hz.
+
+To learn more about using the code please see the README.md in the servo_controller folder.
 
 ## How Servos Work
 <p align="center">
@@ -15,16 +19,14 @@ In the above simulation (simulation file is in hardware folder) there is an osci
 
 
 The ESP32 code begins by calculating how long each servo needs to stay on based on the angle. Then every cycle a signal is sent through the servo line through the shift registers, then copied through the D flip-flops into the JST connectors that actually connect to the servos. There are two servo lines which each control 16 servos. On the actual PCB there are 5 2.50mm JST connectors. The first one from top to bottom is connected to VCC, Servo 1, Servo 2, Clock, Pulse, and Ground. The other 4 JST connectors each have 8 outputs and are connected to banks of servos. The servo numbers are labeled on the diagram and the PCB.
-<p>
-  <img src="docs/Media/Schematic_Image.png"
-       alt="Schematic"
-       width="45%"
-       style="display:inline-block; vertical-align:middle; margin-right:2%;">
-  <img src="docs/Media/PCB_Image.png"
-       alt="PCB"
-       width="45%"
-       style="display:inline-block; vertical-align:middle;">
+<p align="center">
+  <img src="docs/Media/Schematic_Image.png" width="800">
 </p>
+<p align="center">
+  <img src="docs/Media/PCB_Image.png" width="800">
+</p>
+
+## 
 
 
 
