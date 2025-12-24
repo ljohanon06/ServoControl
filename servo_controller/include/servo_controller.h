@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+/*
+ * © 2025 Levi Johanon. All rights reserved.
+ * See LICENSE for details.
+ */
+
 #include "esp_err.h"
 #include "driver/gpio.h"
 

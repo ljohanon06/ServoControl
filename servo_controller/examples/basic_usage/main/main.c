@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+/*
+ * © 2025 Levi Johanon. All rights reserved.
+ * See LICENSE for details.
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include "esp_log.h"
