@@ -1,0 +1,21 @@
+#servo_controller/KConfig
+
+menu "Servo Controller Configuration"
+    
+    config SERVO_TASK_STACK_SIZE
+        int "Servo task stack size"
+        default 4096
+        range 1024 65536
+        help
+            Stack size allocated for the FreeRTOS task for the servos
+
+    config SERVO_TASK_PRIORITY
+        int "Servo task priority"
+        default 15
+        range 1 24
+        help
+            Priority for the servo run task (1-24), higher increases priority
+            
+            Please keep task priority higher than any other user tasks as servos are timing sensative
+
+endmenu
