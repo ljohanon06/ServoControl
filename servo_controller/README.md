@@ -4,7 +4,7 @@ To learn how the project works go to the main README in the github. This README 
 
 This code can only run on ESP32 chips that include RMT 2.0, this is ESP32S2, ESP32S3, and ESP32C3 as of this version. If you have a chip that supports the RMT 2.0 (with the sync manager) add your chip to idf_component.yml. 
 
-[ServoControl Github](https://github.com/ljohanon06/ServoControl/)
+[ServoControl Github](https://github.com/ljohanon06/ServoControl32/)
 
 ---
 
@@ -12,7 +12,7 @@ This code can only run on ESP32 chips that include RMT 2.0, this is ESP32S2, ESP
 This is how to code the servo_controller. To see the code documentation involving all the arguments and return values of the functions,
 please view the html documentation at the link below.
 
-[Servo_Controller Documentation](https://ljohanon06.github.io/ServoControl/servo__controller_8h.html)
+[Servo_Controller Documentation](https://ljohanon06.github.io/ServoControl32/servo__controller_8h.html)
 
 ### Config Struct
 When coding, first initialize the config struct as shown below, filling in your gpio numbers and servo precision. Gpio numbers must be capable of output and not be used for anything else.
@@ -55,6 +55,7 @@ In order to import this project to your ESP-IDF component, first create a compon
 ## License
 This project is licensed under the MIT License.  
 © 2025 Levi Johanon. See the LICENSE file for details.
+
 
 
 
