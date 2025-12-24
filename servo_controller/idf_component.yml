@@ -6,9 +6,9 @@ url: "https://github.com/ljohanon06/ServoControl"
 dependencies:
   idf: 
     version: ">=5.5"
-    #works with 6.0
 
 targets:
   - esp32s3
   - esp32c3
+  - esp32s2
   #ESP chips must have RMT + Sync Manager to work
