@@ -77,7 +77,7 @@ esp_err_t servo_initialize_controller(const servo_controller_config_t *servo_cfg
                         , ESP_ERR_INVALID_ARG, TAG, "GPIO pin %d is out of range", gpio_array[i]);
     }
 
-    ESP_RETURN_ON_FALSE(ret_handle == NULL, ESP_ERR_INVALID_STATE, TAG, "The return handle is not NULL");
+    ESP_RETURN_ON_FALSE(*ret_handle == NULL, ESP_ERR_INVALID_STATE, TAG, "The return handle is not NULL");
 
     //Initialize Fixed memory
     servo_controller_handle_t handle = heap_caps_calloc(1,sizeof(struct servo_controller_s), (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
@@ -89,9 +89,8 @@ esp_err_t servo_initialize_controller(const servo_controller_config_t *servo_cfg
     handle->rmt1 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
     handle->rmt2 = heap_caps_calloc((servo_cfg->serv_pres)*8 + 10,sizeof(rmt_symbol_word_t),(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
 
-    ESP_RETURN_ON_FALSE(handle == NULL || handle->servo_angles == NULL || handle->high_cycles == NULL ||
-                        handle->rmt_handles == NULL || handle->LUT1 == NULL || handle->LUT2 == NULL ||
-                        handle->streaks_buffer == NULL || handle->rmt1 == NULL || handle->rmt2 == NULL,
+    ESP_RETURN_ON_FALSE(handle != NULL && handle->LUT1 != NULL && handle->LUT2 != NULL &&
+                        handle->streaks_buffer != NULL && handle->rmt1 != NULL && handle->rmt2 != NULL,
                         ESP_ERR_NO_MEM, TAG, "There is not enough memory, please ensure 100 bytes per precision point");
 
     
@@ -103,14 +102,14 @@ esp_err_t servo_initialize_controller(const servo_controller_config_t *servo_cfg
     handle->servo_pres = servo_cfg->serv_pres;
     handle->running = false;
     handle->task_handle = NULL;
-    
+
     for(int i = 0; i<4; i++) {
         rmt_tx_channel_config_t tx_config = {
             .clk_src = RMT_CLK_SRC_DEFAULT,
             .gpio_num = gpio_array[i],
-            .mem_block_symbols = 64,
+            .mem_block_symbols = 48,
             .resolution_hz = precision_to_clk_freq(handle->servo_pres),
-            .trans_queue_depth = 6,
+            .trans_queue_depth = 4,
             .flags.invert_out = false,
             .flags.with_dma = false
         };
@@ -189,7 +188,7 @@ static void servo_task(void *arg){
 
 //Start servo controller
 esp_err_t servo_start(servo_controller_handle_t handle){
-    ESP_RETURN_ON_FALSE(handle == NULL, ESP_ERR_INVALID_ARG,TAG,"Handle is null");
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG,TAG,"Handle is null");
     ESP_RETURN_ON_FALSE(!handle->running, ESP_ERR_INVALID_STATE,TAG,"The controller has already been started");
     
     handle->running = true;
@@ -209,7 +208,7 @@ esp_err_t servo_start(servo_controller_handle_t handle){
 
 //Stop the servo controller
 esp_err_t servo_stop(servo_controller_handle_t handle){
-    ESP_RETURN_ON_FALSE(handle == NULL, ESP_ERR_INVALID_ARG,TAG,"Handle is null");
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG,TAG,"Handle is null");
     ESP_RETURN_ON_FALSE(handle->running, ESP_ERR_INVALID_STATE,TAG,"The controller has already been stopped");
 
     handle->running = false;
@@ -220,7 +219,7 @@ esp_err_t servo_stop(servo_controller_handle_t handle){
 
 //Remove the servo controller
 esp_err_t servo_remove_controller(servo_controller_handle_t handle){
-    ESP_RETURN_ON_FALSE(handle == NULL, ESP_ERR_INVALID_ARG,TAG,"The handle is already null");
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG,TAG,"The handle is already null");
     ESP_RETURN_ON_FALSE(!handle->running, ESP_ERR_INVALID_STATE,TAG,"The controller is still started");
 
    
@@ -337,4 +336,3 @@ void rmt_helper(uint16_t *LUT, size_t lut_size, rmt_symbol_word_t *words, size_t
     }
     *rmt_size = buffer_ind/2;
 }
-
