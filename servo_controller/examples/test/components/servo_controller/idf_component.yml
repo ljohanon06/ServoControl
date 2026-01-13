@@ -1,0 +1,15 @@
+#servo_controller/idf_component.yml
+
+version: "1.0.1"
+description: "32 servo controller"
+url: "https://github.com/ljohanon06/ServoControl"
+license: "MIT"
+dependencies:
+  idf: 
+    version: ">=5.5"
+
+targets:
+  - esp32s3
+  - esp32c3
+  - esp32s2
+  #ESP chips must have RMT + Sync Manager to work

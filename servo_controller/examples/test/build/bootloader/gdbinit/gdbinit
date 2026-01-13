@@ -1,0 +1,2 @@
+source /home/levijohanon/Code/ServoControl32/servo_controller/examples/test/build/bootloader/gdbinit/symbols
+source /home/levijohanon/Code/ServoControl32/servo_controller/examples/test/build/bootloader/gdbinit/connect

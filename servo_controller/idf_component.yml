@@ -1,6 +1,6 @@
 #servo_controller/idf_component.yml
 
-version: "1.0.1"
+version: "1.0.2"
 description: "32 servo controller"
 url: "https://github.com/ljohanon06/ServoControl"
 license: "MIT"
